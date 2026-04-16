@@ -105,6 +105,12 @@ class MainWindowController: PlayerWindowController {
     return pluginView
   }()
 
+  lazy var castingDeviceView: CastingDeviceViewController = {
+    let vc = CastingDeviceViewController()
+    vc.mainWindow = self
+    return vc
+  }()
+
   /** The control view for interactive mode. */
   var cropSettingsView: CropBoxViewController?
 
@@ -300,6 +306,7 @@ class MainWindowController: PlayerWindowController {
     case settings
     case playlist
     case plugins
+    case castingDevices
 
     func width() -> CGFloat {
       switch self {
@@ -308,6 +315,8 @@ class MainWindowController: PlayerWindowController {
       case .playlist:
         return CGFloat(Preference.integer(for: .playlistWidth)).clamped(to: PlaylistMinWidth...PlaylistMaxWidth)
       case .plugins:
+        return SettingsWidth
+      case .castingDevices:
         return SettingsWidth
       default:
         Logger.fatal("SideBarViewType.width shouldn't be called here")
@@ -497,6 +506,8 @@ class MainWindowController: PlayerWindowController {
 
   @IBOutlet weak var pipOverlayView: NSVisualEffectView!
 
+  private var castingOverlayView: CastingOverlayView?
+
   lazy var pluginOverlayViewContainer: NSView! = {
     guard let window = window, let cv = window.contentView else { return nil }
     let view = NSView(frame: .zero)
@@ -678,6 +689,11 @@ class MainWindowController: PlayerWindowController {
 
     player.events.emit(.windowLoaded)
 
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(castingStateDidChange(_:)),
+      name: .castingStateDidChange, object: nil
+    )
+
     // Must workaround an AppKit defect in some versions of macOS. This defect is known to exist in
     // Catalina and Big Sur. The problem was not reproducible in early versions of Monterey. It
     // reappeared in Ventura. The status of other versions of macOS is unknown, however the
@@ -737,6 +753,10 @@ class MainWindowController: PlayerWindowController {
 
   private func setupOSCToolbarButtons(_ buttons: [Preference.ToolBarButton]) {
     fragToolbarView.views.forEach { fragToolbarView.removeView($0) }
+    // Floating OSC has limited width (~416pt); fragControlView middle needs ~200pt in floating mode,
+    // fragVolumeView takes 104pt, leaving ~112pt for the toolbar. With 5 compact (20pt) buttons,
+    // spacing must stay ≤2pt (5×20 + 4×2 = 108pt) to avoid detachment.
+    fragToolbarView.spacing = 2
     for buttonType in buttons {
       let button = NSButton()
       OSCToolbarButton.setStyle(of: button, buttonType: buttonType, reducedWidth: buttons.count > 4)
@@ -1296,13 +1316,16 @@ class MainWindowController: PlayerWindowController {
     if case .fullscreen(legacy: true, priorWindowedFrame: _) = fsState {
       restoreDockSettings()
     }
+    if CastingManager.shared.isCasting(for: player) {
+      Task { await CastingManager.shared.stopCasting() }
+    }
     player.stop()
     // stop tracking mouse event
     guard let w = self.window, let cv = w.contentView else { return }
     cv.trackingAreas.forEach(cv.removeTrackingArea)
     playSlider.trackingAreas.forEach(playSlider.removeTrackingArea)
     UserDefaults.standard.set(NSStringFromRect(window!.frame), forKey: "MainWindowLastPosition")
-    
+
     player.events.emit(.windowWillClose)
   }
 
@@ -3048,6 +3071,7 @@ class MainWindowController: PlayerWindowController {
   /// button. This allows the user to control the speed using pressure when using devices that support pressure sensitivity.
   /// - Parameter sender: The button invoking this action.
   @IBAction func leftButtonAction(_ sender: NSButton) {
+    if CastingManager.shared.isCasting { CastingManager.shared.seek(relative: -10); return }
     switch arrowBtnFunction {
     case .playlist, .seek:
       arrowButtonAction(left: true)
@@ -3091,6 +3115,7 @@ class MainWindowController: PlayerWindowController {
   /// button. This allows the user to control the speed using pressure when using devices that support pressure sensitivity.
   /// - Parameter sender: The button invoking this action.
   @IBAction func rightButtonAction(_ sender: NSButton) {
+    if CastingManager.shared.isCasting { CastingManager.shared.seek(relative: 10); return }
     switch arrowBtnFunction {
     case .playlist, .seek:
       arrowButtonAction(left: false)
@@ -3178,7 +3203,7 @@ class MainWindowController: PlayerWindowController {
         view.pleaseSwitchToTab(tab)
       }
       showSideBar(viewController: view, type: .settings)
-    case .playlist, .plugins:
+    case .playlist, .plugins, .castingDevices:
       if let tab = tab {
         view.pleaseSwitchToTab(tab)
       }
@@ -3207,7 +3232,7 @@ class MainWindowController: PlayerWindowController {
         view.pleaseSwitchToTab(tab)
       }
       showSideBar(viewController: view, type: .playlist)
-    case .settings, .plugins:
+    case .settings, .plugins, .castingDevices:
       if let tab = tab {
         view.pleaseSwitchToTab(tab)
       }
@@ -3236,7 +3261,7 @@ class MainWindowController: PlayerWindowController {
         view.pleaseSwitchToTab(tab)
       }
       showSideBar(viewController: view, type: .plugins)
-    case .settings, .playlist:
+    case .settings, .playlist, .castingDevices:
       if let tab = tab {
         view.pleaseSwitchToTab(tab)
       }
@@ -3251,6 +3276,21 @@ class MainWindowController: PlayerWindowController {
       } else if let tab = tab {
         view.pleaseSwitchToTab(tab)
       }
+    }
+  }
+
+  func showCastingDeviceSidebar() {
+    if sidebarAnimationState == .willShow || sidebarAnimationState == .willHide { return }
+    let vc = castingDeviceView
+    switch sideBarStatus {
+    case .hidden:
+      CastingManager.shared.beginDiscoveryForPicker()
+      showSideBar(viewController: vc, type: .castingDevices)
+    case .settings, .playlist, .plugins:
+      CastingManager.shared.beginDiscoveryForPicker()
+      hideSideBar { self.showSideBar(viewController: vc, type: .castingDevices) }
+    case .castingDevices:
+      hideSideBar()
     }
   }
 
@@ -3296,6 +3336,50 @@ class MainWindowController: PlayerWindowController {
       player.screenshot()
     case .plugins:
       showPluginSidebar(tab: nil)
+    case .cast:
+      showCastingDeviceSidebar()
+    }
+  }
+
+  // MARK: - Casting banner
+
+  @objc private func castingStateDidChange(_ notification: Notification) {
+    guard let manager = notification.object as? CastingManager else { return }
+    DispatchQueue.main.async { [weak self] in
+      self?.updateCastingUI(state: manager.state)
+    }
+  }
+
+  private func updateCastingUI(state: CastingState) {
+    if case .casting(let session) = state {
+      if castingOverlayView == nil, let contentView = window?.contentView {
+        let overlay = CastingOverlayView()
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        // Insert below the OSC so playback controls remain interactive.
+        contentView.addSubview(overlay, positioned: .below, relativeTo: controlBarBottom)
+        NSLayoutConstraint.activate([
+          overlay.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+          overlay.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+          overlay.topAnchor.constraint(equalTo: contentView.topAnchor),
+          overlay.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+        castingOverlayView = overlay
+      }
+      castingOverlayView?.update(deviceName: session.device.name)
+
+      // Sync OSC controls with casting device state
+      let duration = max(session.duration, 1)
+      let percentage = (session.position / duration) * 100
+      playSlider.doubleValue = percentage
+      let posTime = VideoTime(session.position)
+      let durTime = VideoTime(session.duration)
+      let remTime = VideoTime(max(session.duration - session.position, 0))
+      [leftLabel, rightLabel].forEach { $0.updateText(with: durTime, given: posTime, and: remTime) }
+      // Bypass the guard in updatePlayButtonState that blocks casting updates.
+      if loaded { playButton.image = NSImage(named: session.isPlaying ? "pause" : "play") }
+    } else {
+      castingOverlayView?.removeFromSuperview()
+      castingOverlayView = nil
     }
   }
 

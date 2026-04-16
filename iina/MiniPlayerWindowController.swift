@@ -179,6 +179,9 @@ class MiniPlayerWindowController: PlayerWindowController, NSPopoverDelegate {
       player.overrideAutoSwitchToMusicMode = false
       player.switchBackFromMiniPlayer(automatically: true, showMainWindow: false)
     }
+    if CastingManager.shared.isCasting(for: player) {
+      Task { await CastingManager.shared.stopCasting() }
+    }
     player.stop()
     player.events.emit(.windowWillClose)
   }

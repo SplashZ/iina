@@ -464,3 +464,29 @@
 "plugin.install_error.cannot_load" = "IINA无法加载此插件，可能是格式错误。";
 "plugin.check_for_updates" = "检查更新";
 "plugin.updating" = "下载更新中……";
+
+// Casting
+"osc_toolbar.cast" = "投屏";
+"casting.stop" = "停止投屏";
+"casting.searching" = "正在搜索...";
+"casting.refresh" = "🔄 刷新设备列表";
+"casting.no_devices" = "未发现设备";
+"casting.casting_to" = "正在投屏到 %@";
+"casting.scanning" = "搜索投屏设备...";
+"casting.refresh_plain" = "刷新";
+"casting.error.no_network" = "请先连接到本地网络。";
+"casting.error.connection_failed" = "连接失败：%@";
+"casting.error.control_failed" = "控制失败：%@";
+"casting.error.device_lost" = "投屏已中断，设备不可访问。";
+"casting.error.device_lost.title" = "投屏已中断";
+"casting.error.device_lost.message" = "与设备的连接已断开。";
+"casting.error.unsupported_format" = "设备可能不支持此格式：%@";
+"casting.overlay.title" = "正在投屏中";
+"casting.error.alert.title" = "投屏失败";
+"casting.error.no_media_url" = "无法获取媒体地址";
+"casting.error.no_avtransport" = "设备不支持 AVTransport";
+"casting.error.non_http_response" = "非 HTTP 响应";
+"casting.osd.switching_audio" = "正在切换音轨...";
+"casting.osd.switching_audio.detail" = "处理中，请稍候";
+"casting.osd.switched_audio" = "音轨切换完成";
+"casting.osd.switch_audio_failed" = "音轨切换失败";

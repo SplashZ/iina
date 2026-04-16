@@ -407,6 +407,11 @@
 "osc_toolbar.sub_track" = "Choose subtitle track";
 "osc_toolbar.screenshot" = "Take a screenshot";
 "osc_toolbar.plugins" = "Show plugins panel";
+"osc_toolbar.cast" = "Cast to TV";
+
+"preference.casting" = "Casting";
+"preference.casting.http_port" = "Local HTTP Port";
+"preference.casting.discovery_timeout" = "Discovery Timeout (s)";
 
 "mini_player.album_art" = "Toggle album art";
 "mini_player.loop" = "Repeat";
@@ -464,3 +469,28 @@
 "plugin.install_error.cannot_load" = "IINA cannot load this plugin. It might be in the wrong format.";
 "plugin.check_for_updates" = "Check for Updates";
 "plugin.updating" = "Downloading update…";
+
+/* DLNA Casting */
+"casting.stop" = "Stop Casting";
+"casting.searching" = "Searching...";
+"casting.refresh" = "🔄 Refresh Devices";
+"casting.error.no_network" = "Please connect to a local network first.";
+"casting.error.connection_failed" = "Failed to connect: %@";
+"casting.error.control_failed" = "Control failed: %@";
+"casting.error.device_lost" = "Casting interrupted. Device unreachable.";
+"casting.error.device_lost.title" = "Casting Interrupted";
+"casting.error.device_lost.message" = "The connection to the device was lost.";
+"casting.error.unsupported_format" = "Device may not support this format: %@";
+"casting.error.alert.title" = "Casting Failed";
+"casting.error.no_media_url" = "Unable to get media URL";
+"casting.error.no_avtransport" = "Device does not support AVTransport";
+"casting.error.non_http_response" = "Non-HTTP response";
+"casting.overlay.title" = "Casting";
+"casting.no_devices" = "No Devices Found";
+"casting.casting_to" = "Casting to %@";
+"casting.scanning" = "Searching for devices...";
+"casting.refresh_plain" = "Refresh";
+"casting.osd.switching_audio" = "Switching Audio Track...";
+"casting.osd.switching_audio.detail" = "Processing, please wait";
+"casting.osd.switched_audio" = "Audio Track Switched";
+"casting.osd.switch_audio_failed" = "Audio Track Switch Failed";

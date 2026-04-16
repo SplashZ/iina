@@ -734,6 +734,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
 
   func applicationWillTerminate(_ notification: Notification) {
     Logger.log("App will terminate")
+    Task { await CastingManager.shared.stopCasting() }
     Logger.closeLogFile()
   }
 

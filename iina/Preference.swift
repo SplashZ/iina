@@ -250,6 +250,10 @@ struct Preference {
     static let ytdlRawOptions = Key("ytdlRawOptions")
     static let httpProxy = Key("httpProxy")
 
+    // Casting
+    static let castingHTTPPort = Key("castingHTTPPort")
+    static let castingDiscoveryTimeout = Key("castingDiscoveryTimeout")
+
     // Control
 
     /** Seek option */
@@ -729,6 +733,7 @@ struct Preference {
     case subTrack
     case screenshot
     case plugins
+    case cast
 
     func image() -> NSImage {
       func makeSymbol(_ names: [String], _ fallbackImage: NSImage.Name) -> NSImage {
@@ -745,6 +750,7 @@ struct Preference {
       case .subTrack: return makeSymbol(["captions.bubble.fill"], "sub-track")
       case .screenshot: return makeSymbol(["camera.shutter.button"], "screenshot")
       case .plugins: return makeSymbol(["puzzlepiece.extension"], "plugin")
+      case .cast: return makeSymbol(["airplayvideo", "tv"], "plugin")
       }
     }
 
@@ -759,6 +765,7 @@ struct Preference {
       case .subTrack: key = "sub_track"
       case .screenshot: key = "screenshot"
       case .plugins: key = "plugins"
+      case .cast: key = "cast"
       }
       return NSLocalizedString("osc_toolbar.\(key)", comment: key)
     }
@@ -840,7 +847,7 @@ struct Preference {
     .controlBarStickToCenter: true,
     .controlBarAutoHideTimeout: Float(2.5),
     .enableControlBarAutoHide: true,
-    .controlBarToolbarButtons: [ToolBarButton.plugins.rawValue, ToolBarButton.pip.rawValue, ToolBarButton.playlist.rawValue, ToolBarButton.settings.rawValue],
+    .controlBarToolbarButtons: [ToolBarButton.cast.rawValue, ToolBarButton.plugins.rawValue, ToolBarButton.pip.rawValue, ToolBarButton.playlist.rawValue, ToolBarButton.settings.rawValue],
     .oscPosition: OSCPosition.floating.rawValue,
     .disablePlaySliderScrolling: false,
     .disableVolumeSliderScrolling: false,
@@ -976,6 +983,8 @@ struct Preference {
     .ytdlSearchPath: "",
     .ytdlRawOptions: "",
     .httpProxy: "",
+    .castingHTTPPort: 8765,
+    .castingDiscoveryTimeout: 10,
 
     .currentInputConfigName: "IINA Default",
 

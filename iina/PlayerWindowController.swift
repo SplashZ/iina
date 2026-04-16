@@ -604,6 +604,8 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
   }
   
   func updatePlayTime(withDuration: Bool, andProgressBar: Bool) {
+    // During casting the OSC is synced from CastingManager state, not from mpv.
+    guard !CastingManager.shared.isCasting else { return }
     // IINA listens for changes to mpv properties such as chapter that can occur during file loading
     // resulting in this function being called before mpv has set its position and duration
     // properties. Confirm the window and file have been loaded.
@@ -634,6 +636,8 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
   
   func updatePlayButtonState(paused: Bool) {
     guard loaded else { return }
+    // During casting the button is managed by updateCastingUI in MainWindowController.
+    guard !CastingManager.shared.isCasting else { return }
     playButton.image = NSImage(named: paused ? "play" : "pause")
   }
 
@@ -671,6 +675,10 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
   // MARK: - IBActions
 
   @IBAction func volumeSliderChanges(_ sender: NSSlider) {
+    if CastingManager.shared.isCasting {
+      CastingManager.shared.setVolume(sender.doubleValue / sender.maxValue)
+      return
+    }
     let value = sender.doubleValue
     if Preference.double(for: .maxVolume) > 100, value > 100 && value < 101 {
       NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
@@ -679,14 +687,22 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
   }
 
   @IBAction func playButtonAction(_ sender: NSButton) {
+    log("[playback] button tapped — isCasting=\(CastingManager.shared.isCasting)")
+    if CastingManager.shared.isCasting { CastingManager.shared.togglePlayPause(); return }
     player.info.state == .paused ? player.resume() : player.pause()
   }
 
   @IBAction func muteButtonAction(_ sender: NSButton) {
+    if CastingManager.shared.isCasting { CastingManager.shared.toggleMute(); return }
     player.toggleMute()
   }
 
   @IBAction func playSliderChanges(_ sender: NSSlider) {
+    if CastingManager.shared.isCasting {
+      let duration = CastingManager.shared.state.session?.duration ?? 1
+      if duration > 0 { CastingManager.shared.seek(to: sender.doubleValue / sender.maxValue * duration) }
+      return
+    }
     guard player.info.state.active else { return }
     let percentage = 100 * sender.doubleValue / sender.maxValue
     player.seek(percent: percentage, forceExact: !followGlobalSeekTypeWhenAdjustSlider)
