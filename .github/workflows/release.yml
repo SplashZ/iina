@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: ./other/download_libs.sh
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -project iina.xcodeproj \
+            -scheme iina \
+            -configuration Release \
+            ONLY_ACTIVE_ARCH=NO \
+            build
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_26.0.app/Contents/Developer
+
+      - name: Package
+        run: |
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "IINA.app" -path "*/Release/*" | head -1)
+          tar cvJf ~/IINA.tar.xz -C "$(dirname "$APP_PATH")" IINA.app
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "IINA+ ${{ github.ref_name }}"
+          body: |
+            ## IINA+ ${{ github.ref_name }}
+
+            IINA fork with DLNA casting support.
+
+            ### Installation
+            1. Download `IINA.tar.xz` below
+            2. Extract and move `IINA.app` to `/Applications`
+
+            ### Changes
+            See [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }})
+          files: ~/IINA.tar.xz
+          draft: false
+          prerelease: false
