@@ -19,7 +19,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Reset in case getopts has been used previously in the shell.
-if ! OPTS=$(getopt -o "h": --long "arch:,yt-dlp-src:,parallel:,help": -n 'parse-options' -- "$@"); then
+SKIP_PLUGINS=false
+
+if ! OPTS=$(getopt -o "h": --long "arch:,yt-dlp-src:,parallel:,skip-plugins,help": -n 'parse-options' -- "$@"); then
   echo -e "${RED}Failed parsing options.${NC}" >&2
   exit 1
 fi
@@ -79,6 +81,10 @@ while true; do
     fi
     PARALLEL_DOWNLOADS=$2
     shift 2
+    ;;
+  --skip-plugins)
+    SKIP_PLUGINS=true
+    shift
     ;;
   --)
     shift
@@ -273,8 +279,10 @@ download_plugin() {
   echo -e "${GREEN}Downloaded ${asset_name}${NC}"
 }
 
-download_plugin "iina/plugin-online-media" "iina-plugin-ytdl" || exit 1
-download_plugin "iina/plugin-userscript" "iina-plugin-userscript" || exit 1
-download_plugin "iina/plugin-opensub" "iina-plugin-opensub" || exit 1
+if [[ "$SKIP_PLUGINS" != "true" ]]; then
+  download_plugin "iina/plugin-online-media" "iina-plugin-ytdl" || exit 1
+  download_plugin "iina/plugin-userscript" "iina-plugin-userscript" || exit 1
+  download_plugin "iina/plugin-opensub" "iina-plugin-opensub" || exit 1
+fi
 
 echo -e "${GREEN}All downloads completed.${NC}"

@@ -17,7 +17,14 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install dependencies
-        run: ./other/download_libs.sh
+        run: ./other/download_libs.sh --skip-plugins
+
+      - name: Download plugins
+        run: |
+          mkdir -p deps/plugins
+          gh release download --repo iina/plugin-online-media --pattern "*.iinaplgz" --dir deps/plugins/
+          gh release download --repo iina/plugin-userscript --pattern "*.iinaplgz" --dir deps/plugins/
+          gh release download --repo iina/plugin-opensub --pattern "*.iinaplgz" --dir deps/plugins/
 
       - name: Build
         run: |
