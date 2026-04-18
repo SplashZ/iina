@@ -40,7 +40,7 @@ jobs:
         run: |
           xcodebuild \
             -project iina.xcodeproj \
-            -scheme iina \
+            -target iina \
             -configuration Release \
             ONLY_ACTIVE_ARCH=NO \
             build
