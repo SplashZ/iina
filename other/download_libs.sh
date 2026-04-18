@@ -19,7 +19,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Reset in case getopts has been used previously in the shell.
-SKIP_PLUGINS=false
+SKIP_PLUGINS="${IINA_SKIP_PLUGINS:-false}"
 
 if ! OPTS=$(getopt -o "h": --long "arch:,yt-dlp-src:,parallel:,skip-plugins,help": -n 'parse-options' -- "$@"); then
   echo -e "${RED}Failed parsing options.${NC}" >&2
