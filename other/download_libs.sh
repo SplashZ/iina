@@ -169,15 +169,24 @@ fetch_latest_plugin_asset() {
   local status_code
 
   response_file=$(mktemp) || return 1
-  local auth_args=()
-  if [[ -n "$GITHUB_TOKEN" ]]; then
-    auth_args=(-H "Authorization: token $GITHUB_TOKEN")
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    status_code=$(curl -s -L \
+      -H "Authorization: token ${GITHUB_TOKEN}" \
+      -o "$response_file" -w "%{http_code}" \
+      "https://api.github.com/repos/${repo}/releases/latest") || {
+      echo -e "${RED}Failed to contact GitHub for ${repo}.${NC}" >&2
+      rm -f "$response_file"
+      return 1
+    }
+  else
+    status_code=$(curl -s -L \
+      -o "$response_file" -w "%{http_code}" \
+      "https://api.github.com/repos/${repo}/releases/latest") || {
+      echo -e "${RED}Failed to contact GitHub for ${repo}.${NC}" >&2
+      rm -f "$response_file"
+      return 1
+    }
   fi
-  status_code=$(curl -s -L "${auth_args[@]}" -o "$response_file" -w "%{http_code}" "https://api.github.com/repos/${repo}/releases/latest") || {
-    echo -e "${RED}Failed to contact GitHub for ${repo}.${NC}" >&2
-    rm -f "$response_file"
-    return 1
-  }
 
   if [[ "$status_code" -lt 200 || "$status_code" -ge 300 ]]; then
     echo -e "${RED}GitHub API returned HTTP ${status_code} for ${repo}.${NC}" >&2
