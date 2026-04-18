@@ -17,13 +17,21 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install dependencies
-        run: ./other/download_libs.sh
-        env:
-          IINA_SKIP_PLUGINS: "true"
-
-      - name: Download plugins
         run: |
-          mkdir -p deps/plugins
+          ARCH=universal
+          BASE="https://iina.io/dylibs/${ARCH}"
+          mkdir -p deps/lib deps/executable deps/plugins
+
+          # Download dylibs
+          files=$(curl -sf "${BASE}/filelist.txt")
+          echo "$files" | xargs -n1 -P5 -I{} curl -sfL "${BASE}/{}" -o "deps/lib/{}"
+
+          # Download yt-dlp
+          curl -sfL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos" \
+            -o deps/executable/youtube-dl
+          chmod +x deps/executable/youtube-dl
+
+          # Download plugins (gh uses GITHUB_TOKEN automatically)
           gh release download --repo iina/plugin-online-media --pattern "*.iinaplgz" --dir deps/plugins/
           gh release download --repo iina/plugin-userscript --pattern "*.iinaplgz" --dir deps/plugins/
           gh release download --repo iina/plugin-opensub --pattern "*.iinaplgz" --dir deps/plugins/
