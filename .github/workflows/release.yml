@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. v1.4.1-dlna.1)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          ARCH=universal
+          BASE="https://iina.io/dylibs/${ARCH}"
+          mkdir -p deps/lib deps/executable deps/plugins
+
+          # Download dylibs
+          files=$(curl -sf "${BASE}/filelist.txt")
+          echo "$files" | xargs -n1 -P5 -I{} curl -sfL "${BASE}/{}" -o "deps/lib/{}"
+
+          # Download yt-dlp
+          curl -sfL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos" \
+            -o deps/executable/youtube-dl
+          chmod +x deps/executable/youtube-dl
+
+          # Download plugins (gh uses GITHUB_TOKEN automatically)
+          gh release download --repo iina/plugin-online-media --pattern "*.iinaplgz" --dir deps/plugins/
+          gh release download --repo iina/plugin-userscript --pattern "*.iinaplgz" --dir deps/plugins/
+          gh release download --repo iina/plugin-opensub --pattern "*.iinaplgz" --dir deps/plugins/
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -project iina.xcodeproj \
+            -scheme iina \
+            -configuration Release \
+            ONLY_ACTIVE_ARCH=NO \
+            ENABLE_TESTABILITY=YES \
+            build
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_26.0.app/Contents/Developer
+
+      - name: Package
+        run: |
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "IINA.app" -path "*/Release/*" | head -1)
+          tar cvJf ~/IINA.tar.xz -C "$(dirname "$APP_PATH")" IINA.app
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "IINA+ ${{ inputs.version }}"
+          body: |
+            ## IINA+ ${{ inputs.version }}
+
+            IINA fork with DLNA casting support.
+
+            ### Installation
+            1. Download `IINA.tar.xz` below
+            2. Extract and move `IINA.app` to `/Applications`
+
+            ### Changes
+            See [commit history](https://github.com/${{ github.repository }}/commits/${{ inputs.version }})
+          files: ~/IINA.tar.xz
+          draft: false
+          prerelease: false
